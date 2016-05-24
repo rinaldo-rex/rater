@@ -36,7 +36,7 @@ except Exception as e:
 feedback_db = cloudant_client['ttpfeedback'] #opening ttpfeedback in cloudantdb
 docs_count = feedback_db.doc_count()
 current_count = docs_count
-flag_count = 2 #the count of the no. of participants in the event
+flag_count = 10 #the count of the no. of participants in the event
 pub_count = 1
 flag = True
 # result_collection  = Result(feedback_db.all_docs, include_docs = True) #collection
