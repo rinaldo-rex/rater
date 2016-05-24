@@ -2,7 +2,7 @@ import time
 import sys
 import ibmiotf.application
 import ibmiotf.device
-import random #for random rating values from 1 to 5
+# import random #for random rating values from 1 to 5
 
 from cloudant.client import Cloudant #for fetching rating from the cloudantdb
 from cloudant.result import Result, ResultByKey #for result collection
@@ -36,25 +36,37 @@ except Exception as e:
 feedback_db = cloudant_client['ttpfeedback'] #opening ttpfeedback in cloudantdb
 docs_count = feedback_db.doc_count()
 current_count = docs_count
+flag_count = 2 #the count of the no. of participants in the event
+pub_count = 1
+flag = True
 # result_collection  = Result(feedback_db.all_docs, include_docs = True) #collection
 deviceCli.connect()
 ratings = {} #ratings dict/hastable
 def publish():
     """Fn to publish the ratings to ibm iotf"""
     rating = int(ratings[sorted(ratings, reverse=True)[0]])
+    global pub_count
     print "Publishing rating: ", rating
-    data = { 'Rating' : rating}
+    print "Pub count" , pub_count
+    if (pub_count == flag_count):
+        print "publish count == flag_count", pub_count
+        data = { 'Rating' : rating*6} # rating for final value
+        global flag
+        flag = False# to end the program
+    else:
+        data = { 'Rating' : rating}
     deviceCli.publishEvent("Rating", "json", data)
+    pub_count += 1
 
 def fetch():
     """Fn. to fetch the ratings from the db"""
     current_count = docs_count
-    query = Query(feedback_db, selector = {'_id':{'$gt':0}}, fields = ['Rating', 'comments'])
+    query = Query(feedback_db, selector = {'_id':{'$gt':0}}, fields = ['Rating', 'timestamp'])
     for doc in query()['docs']:
-        if ratings.has_key(doc['comments']):
+        if ratings.has_key(doc['timestamp']):
             pass
         else:
-            ratings[doc['comments']] = doc['Rating']
+            ratings[doc['timestamp']] = doc['Rating']
             publish()# to publish the rating to iotf
             time.sleep(10)
 fetch()#for initial fetch
@@ -79,10 +91,12 @@ fetch()#for initial fetch
 #         deviceCli.publishEvent("Rating", "json", data)
 #         current_count += 1
 
-while True:
+while flag:
     docs_count = feedback_db.doc_count()
     if current_count == docs_count:
         time.sleep(10)
+    # elif current_count == flag_count:
+    #     print "Final rating"
     else:
         fetch()
 
